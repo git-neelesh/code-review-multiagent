@@ -12,11 +12,8 @@ import asyncio
 import sys
 
 try:
-    from google.adk.agents import Agent
-    from google.adk.models.google_llm import Gemini
     from google.adk.runners import InMemoryRunner
-    from google.adk.tools import google_search
-    from google.genai import types
+    from commit_reviewer.helpful_assistant import root_agent
 except Exception as e:
     print(
         "Error: required google ADK packages are not installed or import failed:\n",
@@ -26,27 +23,6 @@ except Exception as e:
     print("Please install the ADK package and ensure your PYTHONPATH is correct.")
     print("For example: pip install google-adk")
     raise
-
-
-retry_config = types.HttpRetryOptions(
-    attempts=2,  # Maximum retry attempts
-    exp_base=7,  # Delay multiplier
-    initial_delay=1,  # Initial delay before first retry (in seconds)
-    http_status_codes=[429, 500, 503, 504],  # Retry on these HTTP errors
-)
-
-
-root_agent = Agent(
-    name="helpful_assistant",
-    model=Gemini(
-        model="gemini-3.5-flash-lite",
-        retry_options=retry_config,
-    ),
-    description="A simple agent that can answer general questions.",
-    instruction="You are a helpful assistant",
-)
-
-print("✅ Root Agent defined.")
 
 
 async def main():

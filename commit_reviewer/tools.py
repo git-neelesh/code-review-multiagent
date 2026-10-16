@@ -1,51 +1,33 @@
-"""GitHub MCP tool configuration for the ADK workflow.
-
-Use a GitHub MCP server URL via the MCP_SERVER_URL environment variable.
-This follows the real ADK MCP pattern, not the stdio example.
-"""
+"""GitHub MCP toolsets used by the commit review agents."""
 
 import os
-from typing import Any, Optional
 
-try:
-    from google.adk.tools import McpToolset as _McpToolset  # type: ignore
-except Exception:
-    _McpToolset = None
-
-try:
-    from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams  # type: ignore
-except Exception:
-    StreamableHTTPConnectionParams = None
+from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPServerParams
 
 
-class Tools:
-    """Expose a GitHub MCP toolset when MCP_SERVER_URL is configured."""
+GITHUB_MCP_SERVER_URL = "https://api.githubcopilot.com/mcp/"
 
-    def __init__(self):
-        self.github_mcp = self._build_github_mcp()
 
-    def _build_github_mcp(self) -> Optional[Any]:
-        url = os.environ.get("MCP_SERVER_URL")
-        if not url:
-            return None
+def build_github_mcp_toolset(
+    tool_names: list[str], *, require_confirmation: bool = False
+) -> McpToolset:
+    """Create a GitHub MCP toolset with only the requested tools exposed."""
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise RuntimeError("GITHUB_TOKEN must be set to use GitHub MCP tools")
 
-        if _McpToolset is None:
-            raise ImportError("google-adk MCPToolset is not available in this environment")
-
-        if StreamableHTTPConnectionParams is None:
-            raise ImportError(
-                "The installed google-adk version does not expose StreamableHTTPConnectionParams"
-            )
-
-        try:
-            return _McpToolset(
-                connection_params=StreamableHTTPConnectionParams(
-                    url=url,
-                    timeout=30,
-                    sse_read_timeout=300,
-                ),
-                tool_filter=None,
-                tool_name_prefix="github_",
-            )
-        except Exception as exc:
-            raise RuntimeError(f"Failed to connect to GitHub MCP server at {url}: {exc}") from exc
+    return McpToolset(
+        connection_params=StreamableHTTPServerParams(
+            url=os.environ.get("MCP_SERVER_URL", GITHUB_MCP_SERVER_URL),
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-MCP-Toolsets": "all",
+                "X-MCP-Readonly": "false",
+            },
+            timeout=30,
+            sse_read_timeout=300,
+        ),
+        tool_filter=tool_names,
+        require_confirmation=require_confirmation,
+    )

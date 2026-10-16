@@ -20,6 +20,7 @@ from google.adk.models.google_llm import Gemini
 from google.adk.runners import InMemoryRunner
 from google.adk.tools.tool_context import ToolContext
 
+from commit_reviewer.tools import build_github_mcp_toolset
 
 MODEL_NAME = "gemini-3.5-flash-lite"
 
@@ -48,10 +49,19 @@ class RepoFetchAgent(LlmAgent):
             description="Fetch repo metadata and changed code for a commit.",
             model=Gemini(model=MODEL_NAME),
             instruction=(
-                "You are a repo fetch agent. Given a repo and commit id, return JSON with: "
-                "repo, commit_sha, files_changed, summary, diff_excerpt. "
-                "Return valid JSON only."
+                "You are a GitHub commit fetch agent. Parse the GitHub owner and repository name "
+                "from the input, then use get_commit with the supplied commit SHA to fetch factual "
+                "commit metadata and changed-file information. Use get_file_contents at that SHA "
+                "when needed to inspect changed source files. Never invent files, code, or diffs. "
+                "Return JSON with repo, commit_sha, files_changed, summary, and diff_excerpt. "
+                "If the MCP response does not contain a patch, say that the patch is unavailable "
+                "instead of fabricating a diff. Return valid JSON only."
             ),
+            tools=[
+                build_github_mcp_toolset(
+                    ["get_commit", "get_file_contents", "pull_request_read"]
+                )
+            ],
         )
 
 
@@ -95,8 +105,16 @@ class IssueReportAgent(LlmAgent):
             instruction=(
                 "You are the final issue/report agent. Given the review findings and user decision, "
                 "return a final JSON report with: repo, commit_sha, findings, decision, issue_url, summary. "
-                "If the decision is reject, set issue_url to null and explain the rejection. Return valid JSON only."
+                "Only call create_issue when the user decision is explicitly accept. If no explicit "
+                "decision is present, do not create an issue and report that approval is pending. "
+                "If the decision is reject, set issue_url to null and explain the rejection. "
+                "Return valid JSON only."
             ),
+            tools=[
+                build_github_mcp_toolset(
+                    ["create_issue"], require_confirmation=True
+                )
+            ],
         )
 
 
@@ -113,9 +131,13 @@ def build_review_pipeline() -> SequentialAgent:
     )
 
 
-def run_review_pipeline(repo: str, commit_sha: str, user_id: str = "user") -> Dict[str, Any]:
+async def run_review_pipeline(repo: str, commit_sha: str, user_id: str = "user") -> Dict[str, Any]:
     root_agent = build_review_pipeline()
     runner = InMemoryRunner(agent=root_agent)
     payload = _safe_json_text({"repo": repo, "commit_sha": commit_sha})
-    events = runner.run_debug(payload, user_id=user_id, session_id=f"review-{commit_sha[:12]}")
+    events = await runner.run_debug(
+        payload,
+        user_id=user_id,
+        session_id=f"review-{commit_sha[:12]}",
+    )
     return {"events": events, "status": "ok"}
