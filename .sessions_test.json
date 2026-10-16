@@ -1,0 +1,63 @@
+{
+  "sessions": {
+    "bf4c4b54-a5d6-4e9e-99fe-eeb6cd1ffd8e": {
+      "id": "bf4c4b54-a5d6-4e9e-99fe-eeb6cd1ffd8e",
+      "repo": "owner/repo",
+      "commit_sha": "deadbeef",
+      "initiator": "tester",
+      "status": "ISSUES_CREATED",
+      "next_step": null,
+      "findings": [
+        {
+          "id": "f1",
+          "type": "secret",
+          "file": "app/main.py",
+          "line": 42,
+          "description": "Potential hardcoded API key",
+          "severity": "HIGH"
+        }
+      ],
+      "proposed_issues": [
+        {
+          "index": 0,
+          "title": "Hardcoded API key in app/main.py",
+          "body": "A potential hardcoded API key was detected in app/main.py line 42. Remove it and use a secrets manager.",
+          "labels": [
+            "security",
+            "secret"
+          ],
+          "severity": "HIGH"
+        }
+      ],
+      "model_invocations": [
+        {
+          "invocation_id": "mock-inv-1",
+          "model": "mock-gemini",
+          "finish_reason": "success"
+        }
+      ],
+      "pending_action": null,
+      "commit_info": {
+        "files_changed": [
+          "app/main.py",
+          "requirements.txt"
+        ],
+        "summary": "Example change that adds a secret (mock)"
+      },
+      "user_decision": "approve",
+      "issues": [
+        {
+          "repo": "owner/repo",
+          "number": 1,
+          "url": "https://github.com/owner/repo/issues/1",
+          "title": "Hardcoded API key in app/main.py",
+          "body": "A potential hardcoded API key was detected in app/main.py line 42. Remove it and use a secrets manager.",
+          "labels": [
+            "security",
+            "secret"
+          ]
+        }
+      ]
+    }
+  }
+}

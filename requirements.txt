@@ -1,0 +1,7 @@
+# Server dependencies for the POC
+fastapi>=0.95.0
+uvicorn>=0.22.0
+
+# Install the ADK package if available. Adjust the package name if your
+# environment uses a different distribution (for example google-generativeai).
+google-adk>=2.12.0
